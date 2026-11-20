@@ -1,2 +1,0 @@
-net.minecraft.world.entity.monster.SharedMonsterAttributes net.minecraft.world.entity.ai.attributes.Attributes
-net.minecraft.world.level.block.state.BlockState triggerEvent() net.minecraft.block.AbstractBlock.AbstractBlockState triggerEvent()

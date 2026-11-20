@@ -1,0 +1,103 @@
+// Loom's remapper adds a descriptor to a few lambda method names in @Inject annotations
+// when remapping the NeoForge jar. NeoForge needs the plain Mojang name, so strip the
+// descriptor from those UTF8 constants after remapJar has run.
+
+import java.util.zip.ZipFile
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+def NEOFORGE_LAMBDA_NAMES = [
+	'lambda$new$7',
+	'lambda$displayScoreboardSidebar$14'
+]
+
+static int u2(byte[] data, int pos)
+{
+	return ((data[pos] & 0xff) << 8) | (data[pos + 1] & 0xff)
+}
+
+static byte[] patchClassFile(byte[] data, List<String> names)
+{
+	int cpCount = u2(data, 8)
+	ByteArrayOutputStream out = new ByteArrayOutputStream()
+	out.write(data, 0, 10)  // magic, minor, major, constant_pool_count
+
+	int pos = 10
+	for (int i = 1; i < cpCount; i++)
+	{
+		int tag = data[pos++] & 0xff
+		if (tag == 1)
+		{
+			int len = u2(data, pos)
+			pos += 2
+			byte[] value = Arrays.copyOfRange(data, pos, pos + len)
+			pos += len
+
+			String text = new String(value, 'UTF-8')
+			String replacement = names.find { name -> text.startsWith(name + '(') }
+			if (replacement != null)
+			{
+				value = replacement.getBytes('UTF-8')
+				len = value.length
+			}
+
+			out.write(1)
+			out.write((len >>> 8) & 0xff)
+			out.write(len & 0xff)
+			out.write(value)
+		}
+		else if (tag == 5 || tag == 6)
+		{
+			out.write(data, pos - 1, 9)
+			pos += 8
+			i++  // long and double take two constant pool slots
+		}
+		else
+		{
+			int size = ([7, 8, 16, 19, 20].contains(tag)) ? 2 :
+					([3, 4, 9, 10, 11, 12, 17, 18].contains(tag)) ? 4 :
+					(tag == 15) ? 3 : -1
+			if (size < 0)
+			{
+				throw new GradleException("Unknown constant pool tag ${tag}")
+			}
+			out.write(data, pos - 1, size + 1)
+			pos += size
+		}
+	}
+
+	out.write(data, pos, data.length - pos)
+	return out.toByteArray()
+}
+
+tasks.register('patchNeoForgeMixinTargets') {
+	dependsOn tasks.named('remapJar')
+	doLast {
+		File jarFile = tasks.named('remapJar').get().archiveFile.get().asFile
+		File tmpFile = new File(jarFile.parentFile, jarFile.name + '.patched')
+
+		new ZipFile(jarFile).withCloseable { zf ->
+			new ZipOutputStream(new FileOutputStream(tmpFile)).withCloseable { zout ->
+				zf.entries().each { entry ->
+					byte[] bytes = zf.getInputStream(entry).bytes
+					if (entry.name.endsWith('.class'))
+					{
+						bytes = patchClassFile(bytes, NEOFORGE_LAMBDA_NAMES)
+					}
+					zout.putNextEntry(new ZipEntry(entry.name))
+					zout.write(bytes)
+					zout.closeEntry()
+				}
+			}
+		}
+
+		Files.move(tmpFile.toPath(), jarFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+		logger.lifecycle("Patched NeoForge mixin targets in ${jarFile.name}")
+	}
+}
+
+tasks.named('build') {
+	dependsOn tasks.named('patchNeoForgeMixinTargets')
+}
