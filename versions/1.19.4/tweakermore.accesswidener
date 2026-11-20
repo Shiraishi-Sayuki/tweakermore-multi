@@ -1,4 +1,0 @@
-accessWidener	v1	named
-
-accessible  class   net/minecraft/client/renderer/block/ModelBlockRenderer$Cache
-accessible  class   net/minecraft/client/resources/DefaultPlayerSkin$SkinType

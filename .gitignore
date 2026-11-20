@@ -35,3 +35,7 @@ run/
 # scripts
 __pycache__
 *.py[cod]
+
+# local mod jars
+libs/
+CommonMaven/

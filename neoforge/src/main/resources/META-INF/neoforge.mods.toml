@@ -1,0 +1,48 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "LGPL-3.0"
+
+[[mods]]
+modId = "tweakermore"
+version = "${mod_version}"
+displayName = "TweakerMore"
+displayURL = "https://modrinth.com/mod/tweakermore"
+logoFile = "assets/tweakermore/icon.png"
+authors = "Fallen_Breath, Shiraishi-Sayuki (multiloader port)"
+description = '''
+A collection of client-side tweak kits for enhance your Minecraft game experience.
+'''
+accessTransformers = [
+  "META-INF/accesstransformer.cfg"
+]
+
+[[mixins]]
+config = "tweakermore.mixins.json"
+
+[[dependencies.tweakermore]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[26.2,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.tweakermore]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[26.2,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.tweakermore]]
+modId = "malilib"
+mandatory = true
+versionRange = "[0.26.2,)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.tweakermore]]
+modId = "conditional_mixin"
+mandatory = true
+versionRange = "[0.6.4,)"
+ordering = "AFTER"
+side = "CLIENT"

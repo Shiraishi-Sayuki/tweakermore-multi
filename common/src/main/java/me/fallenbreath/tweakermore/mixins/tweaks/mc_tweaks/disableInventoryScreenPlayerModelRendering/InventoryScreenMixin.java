@@ -1,0 +1,58 @@
+/*
+ * This file is part of the TweakerMore project, licensed under the
+ * GNU Lesser General Public License v3.0
+ *
+ * Copyright (C) 2025  Fallen_Breath and contributors
+ *
+ * TweakerMore is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * TweakerMore is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with TweakerMore.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package me.fallenbreath.tweakermore.mixins.tweaks.mc_tweaks.disableInventoryScreenPlayerModelRendering;
+
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import me.fallenbreath.tweakermore.config.TweakerMoreConfigs;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.world.entity.LivingEntity;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+import net.minecraft.client.gui.screens.inventory.AbstractMountInventoryScreen;
+
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+
+@Mixin(value = {
+		InventoryScreen.class,
+		CreativeModeInventoryScreen.class,
+		AbstractMountInventoryScreen.class,
+})
+public abstract class InventoryScreenMixin
+{
+	@WrapWithCondition(
+			method = "extractBackground",
+			at = @At(
+					value = "INVOKE",
+					target = "Lnet/minecraft/client/gui/screens/inventory/InventoryScreen;extractEntityInInventoryFollowsMouse(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIIIIFFFLnet/minecraft/world/entity/LivingEntity;)V"
+			)
+	)
+	private static boolean disableInventoryScreenPlayerModelRendering_cancel(
+			GuiGraphicsExtractor context,
+
+			int x1, int y1, int x2, int y2, int size, float f,
+			float mouseX, float mouseY, LivingEntity entity
+	)
+	{
+		return !TweakerMoreConfigs.DISABLE_INVENTORY_SCREEN_PLAYER_MODEL_RENDERING.getBooleanValue();
+	}
+}

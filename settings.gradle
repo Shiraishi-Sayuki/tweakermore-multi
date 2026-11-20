@@ -1,36 +1,31 @@
-import groovy.json.JsonSlurper
-
 pluginManagement {
 	repositories {
 		maven {
 			name = 'Fabric'
-			url = 'https://maven.fabricmc.net/'
+			url = uri('https://maven.fabricmc.net')
 		}
 		maven {
-			name = 'Jitpack'
-			url = 'https://maven.fallenbreath.me/jitpack'
-			content { includeGroupAndSubgroups('com.github') }
+			name = 'NeoForged'
+			url = uri('https://maven.neoforged.net/releases')
+		}
+		maven {
+			name = 'Architectury'
+			url = uri('https://maven.architectury.dev/')
+		}
+		maven {
+			name = 'ModDevGradle'
+			url = uri('https://maven.neoforged.net/releases')
 		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
-	resolutionStrategy {
-		eachPlugin {
-			switch (requested.id.id) {
-				case 'com.replaymod.preprocess': {
-					useModule("com.github.Fallen-Breath:preprocessor:${requested.version}")
-					break
-				}
-			}
-		}
-	}
 }
 
-def settings = new JsonSlurper().parseText(file('settings.json').text)
-for (String version : settings.versions) {
-	include(":$version")
-
-	def proj = project(":$version")
-	proj.projectDir = file("versions/$version")
-	proj.buildFileName = '../../common.gradle'
+plugins {
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+rootProject.name = 'tweakermore-multiloader'
+include('common')
+include('fabric')
+include('neoforge')

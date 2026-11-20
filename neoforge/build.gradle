@@ -1,0 +1,122 @@
+plugins {
+	id 'net.neoforged.moddev'
+	id 'maven-publish'
+}
+
+repositories {
+	maven { url = 'https://libraries.minecraft.net' }
+	maven { url = 'https://maven.neoforged.net/releases' }
+	maven { url = 'https://maven.architectury.dev/' }
+	maven { url = 'https://maven.fallenbreath.me/releases'
+		content { includeGroupAndSubgroups("me.fallenbreath") }
+	}
+}
+
+configurations {
+	commonJava {
+		canBeResolved = true
+	}
+	jarJarMod {
+		canBeResolved = true
+		canBeConsumed = false
+	}
+}
+
+neoForge {
+	enable {
+		version = project.neoforge_version
+		disableRecompilation = true
+	}
+
+	accessTransformers.from file("src/main/resources/META-INF/accesstransformer.cfg")
+
+	mods {
+		tweakermore {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	implementation "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "org.jetbrains:annotations:24.1.0"
+
+	compileOnly "me.fallenbreath:conditional-mixin-neoforge:${project.conditionalmixin_version}"
+	jarJarMod "me.fallenbreath:conditional-mixin-neoforge:${project.conditionalmixin_version}"
+
+	implementation files("${rootProject.projectDir}/libs/${project.malilib_neoforge_file}")
+	compileOnly files("${rootProject.projectDir}/libs/${project.tweakeroo_neoforge_file}")
+	compileOnly files("${rootProject.projectDir}/libs/${project.itemscroller_neoforge_file}")
+	compileOnly files("${rootProject.projectDir}/libs/${project.litematica_neoforge_file}")
+	compileOnly files("${rootProject.projectDir}/libs/${project.minihud_neoforge_file}")
+
+	implementation project(path: ':common', configuration: 'commonJar')
+
+	commonJava project(path: ':common', configuration: 'commonJava')
+}
+
+// Compile common sources directly, so the common code uses NeoForge's own mappings
+tasks.named('compileJava', JavaCompile) {
+	dependsOn(configurations.commonJava)
+	source(configurations.commonJava)
+}
+
+base {
+	archivesName = "tweakermore-neoforge-${project.minecraft_version_out}"
+	group = project.group + "." + project.mod_id
+	version = project.mod_version
+	if (version.endsWith('-dev')) {
+		version += "." + new Date().format('yyyyMMdd.HHmmss')
+	}
+}
+
+processResources {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	inputs.property "mod_version", project.mod_version
+	filesMatching("META-INF/neoforge.mods.toml") {
+		expand "mod_version": project.mod_version
+	}
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+	withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
+	it.options.release = 25
+}
+
+jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from(rootProject.file("LICENSE")) {
+		rename { "${it}_${base.archivesName}" }
+	}
+	// include the common module's classes and resources
+	from(project(':common').sourceSets.main.output.classesDirs)
+	from(project(':common').sourceSets.main.resources) {
+		exclude "fabric.mod.json"
+		exclude "tweakermore.accesswidener"
+	}
+	// bundle conditional-mixin-neoforge as a nested jar (NeoForge jar-in-jar)
+	from(configurations.jarJarMod) {
+		into 'META-INF/jarjar'
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifactId = base.archivesName.get()
+			from components.java
+		}
+	}
+	repositories {
+		maven {
+			url = "${rootProject.projectDir}/CommonMaven"
+		}
+	}
+}
